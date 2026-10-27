@@ -2,3 +2,5 @@
 monitors.log
 config.json
 .idea/
+monitors-mac-*
+.monitors.lock

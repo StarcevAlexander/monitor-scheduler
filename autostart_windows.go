@@ -32,18 +32,18 @@ func uninstallAutostart() error {
 	return nil
 }
 
-func acquireSingleInstance() (windows.Handle, error) {
+func acquireSingleInstance() (func(), error) {
 	name, err := windows.UTF16PtrFromString(singleInstanceMutex)
 	if err != nil {
-		return 0, fmt.Errorf("mutex name: %w", err)
+		return nil, fmt.Errorf("mutex name: %w", err)
 	}
 	h, err := windows.CreateMutex(nil, false, name)
 	if errors.Is(err, windows.ERROR_ALREADY_EXISTS) {
 		windows.CloseHandle(h)
-		return 0, errors.New("scheduler is already running")
+		return nil, errors.New("scheduler is already running")
 	}
 	if err != nil {
-		return 0, fmt.Errorf("create mutex: %w", err)
+		return nil, fmt.Errorf("create mutex: %w", err)
 	}
-	return h, nil
+	return func() { windows.CloseHandle(h) }, nil
 }

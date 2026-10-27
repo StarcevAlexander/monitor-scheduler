@@ -9,18 +9,6 @@ const (
 	manualOffDelay = time.Second
 	dateLayout = "2006-01-02"
 	clockLayout = "15:04"
-	autostartKeyPath = `Software\Microsoft\Windows\CurrentVersion\Run`
-	autostartValueName = "MonitorScheduler"
-	singleInstanceMutex = `Local\MonitorSchedulerSingleInstance`
-)
-
-const (
-	hwndBroadcast uintptr = 0xFFFF
-	wmSysCommand uintptr = 0x0112
-	scMonitorPower uintptr = 0xF170
-	monitorPowerOff uintptr = 2
-	monitorPowerOn = ^uintptr(0)
-	mouseEventMove uintptr = 0x0001
 )
 
 var weekdayNames = map[string]time.Weekday{

@@ -9,8 +9,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"time"
-
-	"golang.org/x/sys/windows"
 )
 
 func main() {
@@ -64,11 +62,11 @@ func run(exePath string, args []string) error {
 }
 
 func runScheduler(configPath string) error {
-	mutex, err := acquireSingleInstance()
+	release, err := acquireSingleInstance()
 	if err != nil {
 		return err
 	}
-	defer windows.CloseHandle(mutex)
+	defer release()
 
 	s, err := newScheduler(configPath, applyAction)
 	if err != nil {
