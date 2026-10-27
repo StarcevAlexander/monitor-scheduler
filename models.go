@@ -29,4 +29,5 @@ type Config struct {
 type firingKey struct {
 	date string
 	rule int
+	warning bool
 }

@@ -14,10 +14,11 @@ type scheduler struct {
 	modTime time.Time
 	fired map[firingKey]struct{}
 	apply func(Action) error
+	warn func() error
 }
 
-func newScheduler(configPath string, apply func(Action) error) (*scheduler, error) {
-	s := &scheduler{configPath: configPath, fired: map[firingKey]struct{}{}, apply: apply}
+func newScheduler(configPath string, apply func(Action) error, warn func() error) (*scheduler, error) {
+	s := &scheduler{configPath: configPath, fired: map[firingKey]struct{}{}, apply: apply, warn: warn}
 	if err := s.reload(); err != nil {
 		return nil, err
 	}
@@ -60,6 +61,14 @@ func (s *scheduler) tick(now time.Time) {
 		if key.date != today {
 			delete(s.fired, key)
 		}
+	}
+	for _, r := range dueWarnings(s.config.Rules, now, s.fired) {
+		log.Printf("warning: monitors off at %s", r.Time)
+		go func() {
+			if err := s.warn(); err != nil {
+				log.Printf("warning before %s failed: %v", r.Time, err)
+			}
+		}()
 	}
 	for _, r := range dueRules(s.config.Rules, now, s.fired) {
 		if err := s.apply(r.Action); err != nil {

@@ -42,6 +42,8 @@ func run(exePath string, args []string) error {
 		return monitorsOff()
 	case "on":
 		return monitorsOn()
+	case "warn":
+		return showOffWarning()
 	case "run":
 		return runScheduler(filepath.Join(dir, configFileName))
 	case "install":
@@ -57,7 +59,7 @@ func run(exePath string, args []string) error {
 		log.Printf("autostart removed")
 		return nil
 	default:
-		return fmt.Errorf("unknown command %q, use: run | on | off | install | uninstall", command)
+		return fmt.Errorf("unknown command %q, use: run | on | off | warn | install | uninstall", command)
 	}
 }
 
@@ -68,7 +70,7 @@ func runScheduler(configPath string) error {
 	}
 	defer release()
 
-	s, err := newScheduler(configPath, applyAction)
+	s, err := newScheduler(configPath, applyAction, showOffWarning)
 	if err != nil {
 		return err
 	}

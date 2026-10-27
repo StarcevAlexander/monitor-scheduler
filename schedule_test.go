@@ -43,6 +43,41 @@ func TestDueRulesFiresOncePerDay(t *testing.T) {
 	}
 }
 
+func TestDueWarnings(t *testing.T) {
+	rules := []Rule{
+		{Action: ActionOff, Time: ClockTime{23, 0}},
+		{Action: ActionOn, Time: ClockTime{23, 0}},
+	}
+	fired := map[firingKey]struct{}{}
+	before := time.Date(2026, 10, 26, 22, 59, 0, 0, time.Local)
+	if got := dueWarnings(rules, before.Add(-time.Minute), fired); len(got) != 0 {
+		t.Fatalf("two minutes before: got %d warnings, want 0", len(got))
+	}
+	got := dueWarnings(rules, before, fired)
+	if len(got) != 1 || got[0].Action != ActionOff {
+		t.Fatalf("one minute before: got %v, want only the off rule", got)
+	}
+	if got := dueWarnings(rules, before.Add(30*time.Second), fired); len(got) != 0 {
+		t.Fatalf("same minute: got %d warnings, want 0", len(got))
+	}
+	if got := dueRules(rules, before.Add(time.Minute), fired); len(got) != 2 {
+		t.Fatalf("warning must not consume the action: got %d rules, want 2", len(got))
+	}
+}
+
+func TestDueWarningsAcrossMidnight(t *testing.T) {
+	rules := []Rule{{Action: ActionOff, Time: ClockTime{0, 0}, Days: []Day{Day(time.Monday)}}}
+	fired := map[firingKey]struct{}{}
+	sunday := time.Date(2026, 10, 25, 23, 59, 10, 0, time.Local)
+	if got := dueWarnings(rules, sunday, fired); len(got) != 1 {
+		t.Fatalf("sunday 23:59 before monday 00:00: got %d warnings, want 1", len(got))
+	}
+	saturday := sunday.AddDate(0, 0, -1)
+	if got := dueWarnings(rules, saturday, map[firingKey]struct{}{}); len(got) != 0 {
+		t.Fatalf("saturday 23:59: got %d warnings, want 0", len(got))
+	}
+}
+
 func TestConfigJSON(t *testing.T) {
 	tests := []struct {
 		name string

@@ -9,6 +9,9 @@ const (
 	manualOffDelay = time.Second
 	dateLayout = "2006-01-02"
 	clockLayout = "15:04"
+	warningLead = time.Minute
+	warningTitle = "Мониторы"
+	warningText = "Мониторы выключатся через 1 минуту.\n\nВключить их снова можно только нажав любую кнопку на клавиатуре."
 )
 
 var weekdayNames = map[string]time.Weekday{

@@ -77,13 +77,21 @@ func (r Rule) matches(t time.Time) bool {
 }
 
 func dueRules(rules []Rule, now time.Time, fired map[firingKey]struct{}) []Rule {
+	return collectDue(rules, now, now, false, fired)
+}
+
+func dueWarnings(rules []Rule, now time.Time, fired map[firingKey]struct{}) []Rule {
+	return collectDue(rules, now, now.Add(warningLead), true, fired)
+}
+
+func collectDue(rules []Rule, now, at time.Time, warning bool, fired map[firingKey]struct{}) []Rule {
 	date := now.Format(dateLayout)
 	var due []Rule
 	for i, r := range rules {
-		if !r.matches(now) {
+		if (warning && r.Action != ActionOff) || !r.matches(at) {
 			continue
 		}
-		key := firingKey{date: date, rule: i}
+		key := firingKey{date: date, rule: i, warning: warning}
 		if _, done := fired[key]; done {
 			continue
 		}

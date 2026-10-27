@@ -13,4 +13,8 @@ const (
 	monitorPowerOff uintptr = 2
 	monitorPowerOn = ^uintptr(0)
 	mouseEventMove uintptr = 0x0001
+	mbIconWarning uintptr = 0x00000030
+	mbSystemModal uintptr = 0x00001000
+	mbSetForeground uintptr = 0x00010000
+	mbTopmost uintptr = 0x00040000
 )
