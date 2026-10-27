@@ -1,0 +1,7 @@
+{
+  "rules": [
+    { "action": "off", "time": "23:00" },
+    { "action": "on", "time": "08:00", "days": ["mon", "tue", "wed", "thu", "fri"] },
+    { "action": "on", "time": "10:00", "days": ["sat", "sun"] }
+  ]
+}

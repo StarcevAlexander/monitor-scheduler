@@ -1,0 +1,4 @@
+*.exe
+monitors.log
+config.json
+.idea/

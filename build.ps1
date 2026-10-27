@@ -1,0 +1,6 @@
+go vet ./...
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+go test ./...
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+go build -ldflags "-H=windowsgui -s -w" -o monitors.exe .
+exit $LASTEXITCODE
