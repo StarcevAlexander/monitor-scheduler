@@ -31,3 +31,20 @@ type firingKey struct {
 	rule int
 	warning bool
 }
+
+type postponeOption struct {
+	label string
+	delay time.Duration
+}
+
+type postponeRequest struct {
+	off time.Time
+	delay time.Duration
+}
+
+type deferredOff struct {
+	at time.Time
+	warned bool
+}
+
+type warnFunc func(timeout time.Duration) (time.Duration, error)

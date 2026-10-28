@@ -15,9 +15,17 @@ func monitorsOn() error {
 }
 
 func runTool(path string, args ...string) error {
-	out, err := exec.Command(path, args...).CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("%s: %w: %s", path, err, bytes.TrimSpace(out))
+	_, err := toolOutput(path, args...)
+	return err
+}
+
+func toolOutput(path string, args ...string) (string, error) {
+	var stdout, stderr bytes.Buffer
+	cmd := exec.Command(path, args...)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("%s: %w: %s", path, err, bytes.TrimSpace(stderr.Bytes()))
 	}
-	return nil
+	return stdout.String(), nil
 }

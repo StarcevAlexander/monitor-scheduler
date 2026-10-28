@@ -12,7 +12,17 @@ const (
 	warningLead = time.Minute
 	warningTitle = "Мониторы"
 	warningText = "Мониторы выключатся через 1 минуту.\n\nВключить их снова можно только нажав любую кнопку на клавиатуре."
+	postponePrompt = "Отложить выключение на:"
+	postponeQueueSize = 8
+	shortcutName = "Выключить мониторы"
 )
+
+var postponeOptions = []postponeOption{
+	{label: "15 минут", delay: 15 * time.Minute},
+	{label: "30 минут", delay: 30 * time.Minute},
+	{label: "1 час", delay: time.Hour},
+	{label: "2 часа", delay: 2 * time.Hour},
+}
 
 var weekdayNames = map[string]time.Weekday{
 	"mon": time.Monday,

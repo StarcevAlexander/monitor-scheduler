@@ -43,7 +43,12 @@ func run(exePath string, args []string) error {
 	case "on":
 		return monitorsOn()
 	case "warn":
-		return showOffWarning()
+		delay, err := showOffWarning(warningLead)
+		if err != nil {
+			return err
+		}
+		log.Printf("warning closed, postpone: %s", delay)
+		return nil
 	case "run":
 		return runScheduler(filepath.Join(dir, configFileName))
 	case "install":
@@ -51,12 +56,20 @@ func run(exePath string, args []string) error {
 			return err
 		}
 		log.Printf("autostart installed: %s", exePath)
+		if err := installShortcut(exePath); err != nil {
+			return err
+		}
+		log.Printf("desktop shortcut installed")
 		return nil
 	case "uninstall":
 		if err := uninstallAutostart(); err != nil {
 			return err
 		}
 		log.Printf("autostart removed")
+		if err := uninstallShortcut(); err != nil {
+			return err
+		}
+		log.Printf("desktop shortcut removed")
 		return nil
 	default:
 		return fmt.Errorf("unknown command %q, use: run | on | off | warn | install | uninstall", command)
