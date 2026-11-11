@@ -4,3 +4,4 @@ config.json
 .idea/
 monitors-mac-*
 .monitors.lock
+/target
