@@ -1,20 +1,20 @@
+use windows::Win32::Devices::Display::DisplayConfigGetDeviceInfo;
+use windows::Win32::Devices::Display::GetDisplayConfigBufferSizes;
+use windows::Win32::Devices::Display::QueryDisplayConfig;
 use windows::Win32::Devices::Display::DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME;
 use windows::Win32::Devices::Display::DISPLAYCONFIG_MODE_INFO;
 use windows::Win32::Devices::Display::DISPLAYCONFIG_PATH_INFO;
 use windows::Win32::Devices::Display::DISPLAYCONFIG_TARGET_DEVICE_NAME;
-use windows::Win32::Devices::Display::DisplayConfigGetDeviceInfo;
-use windows::Win32::Devices::Display::GetDisplayConfigBufferSizes;
 use windows::Win32::Devices::Display::QDC_ONLY_ACTIVE_PATHS;
 use windows::Win32::Devices::Display::QUERY_DISPLAY_CONFIG_FLAGS;
-use windows::Win32::Devices::Display::QueryDisplayConfig;
 use windows::Win32::Foundation::ERROR_SUCCESS;
 use windows::Win32::Foundation::HWND;
 use windows::Win32::Foundation::LPARAM;
 use windows::Win32::Foundation::LUID;
 use windows::Win32::Foundation::WIN32_ERROR;
 use windows::Win32::Foundation::WPARAM;
-use windows::Win32::UI::Input::KeyboardAndMouse::MOUSEEVENTF_MOVE;
 use windows::Win32::UI::Input::KeyboardAndMouse::mouse_event;
+use windows::Win32::UI::Input::KeyboardAndMouse::MOUSEEVENTF_MOVE;
 use windows::Win32::UI::WindowsAndMessaging::PostMessageW;
 
 use crate::constants_windows::HWND_BROADCAST;
