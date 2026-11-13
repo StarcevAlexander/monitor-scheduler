@@ -1,6 +1,6 @@
 [package]
 name = "monitors"
-version = "1.0.2"
+version = "1.0.3"
 edition = "2021"
 description = "Turns monitors off and on on a schedule"
 

@@ -1,7 +1,11 @@
 use std::fs;
+use std::path::Path;
 
 use crate::constants::default_config;
+use crate::models::Action;
+use crate::models::ClockTime;
 use crate::models::Config;
+use crate::models::Rule;
 
 pub fn load(path: &std::path::Path) -> Result<Config, String> {
     match fs::read_to_string(path) {
@@ -25,6 +29,51 @@ pub fn write(path: &std::path::Path, cfg: &Config) -> Result<(), String> {
     let mut data = serde_json::to_string_pretty(cfg).map_err(|e| format!("encode config: {e}"))?;
     data.push('\n');
     fs::write(path, data).map_err(|e| format!("write config: {e}"))
+}
+
+pub fn rule_times(cfg: &Config) -> (Option<ClockTime>, Option<ClockTime>) {
+    let mut off = None;
+    let mut on = None;
+    for r in &cfg.rules {
+        if off.is_none() && r.action == Action::Off {
+            off = Some(r.time);
+        }
+        if on.is_none() && r.action == Action::On {
+            on = Some(r.time);
+        }
+    }
+    (off, on)
+}
+
+pub fn set_rule_times(path: &Path, off: ClockTime, on: ClockTime) -> Result<(), String> {
+    let mut cfg = load(path)?;
+    let mut saw_off = false;
+    let mut saw_on = false;
+    for r in &mut cfg.rules {
+        if r.action == Action::Off && !saw_off {
+            r.time = off;
+            saw_off = true;
+        }
+        if r.action == Action::On && !saw_on {
+            r.time = on;
+            saw_on = true;
+        }
+    }
+    if !saw_off {
+        cfg.rules.push(Rule {
+            action: Action::Off,
+            time: off,
+            days: vec![],
+        });
+    }
+    if !saw_on {
+        cfg.rules.push(Rule {
+            action: Action::On,
+            time: on,
+            days: vec![],
+        });
+    }
+    write(path, &cfg)
 }
 
 #[cfg(test)]

@@ -5,6 +5,7 @@ pub const LAUNCH_AGENT_LABEL: &str = "com.starcevalexander.monitor-scheduler";
 pub const LAUNCH_AGENTS_DIR: &str = "Library/LaunchAgents";
 pub const SINGLE_INSTANCE_LOCK_NAME: &str = ".monitors.lock";
 pub const DESKTOP_DIR: &str = "Desktop";
+pub const SHORTCUT_NAME: &str = "Выключить мониторы";
 pub const SHORTCUT_EXT: &str = ".command";
 pub const SHORTCUT_SCRIPT: &str = "#!/bin/sh\nexec {} off\n";
 pub const POSTPONE_BUTTON: &str = "Отложить…";

@@ -9,9 +9,12 @@ use std::time::SystemTime;
 
 use chrono::DateTime;
 use chrono::Local;
+use chrono::TimeZone;
 
 use crate::config;
 use crate::constants::CHECK_INTERVAL;
+use crate::constants::TIMER_FILE_NAME;
+use crate::constants::TIMER_TIME_FORMAT;
 use crate::constants::WARNING_LEAD;
 use crate::logf;
 use crate::models::trunc_minute;
@@ -37,6 +40,9 @@ pub struct Scheduler {
     pub(crate) postpones_rx: mpsc::Receiver<PostponeRequest>,
     apply: ApplyFn,
     warn: WarnFn,
+    timer: Option<DateTime<Local>>,
+    timer_warned: bool,
+    timer_raw: Option<String>,
 }
 
 impl Scheduler {
@@ -53,6 +59,9 @@ impl Scheduler {
             postpones_rx,
             apply,
             warn,
+            timer: None,
+            timer_warned: false,
+            timer_raw: None,
         };
         s.reload()?;
         Ok(s)
@@ -89,12 +98,13 @@ impl Scheduler {
     pub fn tick(&mut self, now: DateTime<Local>) {
         self.reload_if_changed();
         self.drain_postpones();
+        self.sync_timer();
         let today = now.format("%Y-%m-%d").to_string();
         self.fired.retain(|key| key.date == today);
         let now_unix = now.timestamp();
         self.skipped.retain(|minute| now_unix - minute < 60);
         for _ in due_warnings(&self.config.rules, now, &mut self.fired) {
-            self.start_warning(trunc_minute(now + WARNING_LEAD), now);
+            self.start_warning(trunc_minute(now + WARNING_LEAD), now, false);
         }
         let mut to_warn = Vec::new();
         for d in &mut self.deferred {
@@ -104,7 +114,7 @@ impl Scheduler {
             }
         }
         for at in to_warn {
-            self.start_warning(at, now);
+            self.start_warning(at, now, false);
         }
         for r in due_rules(&self.config.rules, now, &mut self.fired) {
             if r.action == Action::Off && self.skipped.contains(&trunc_minute(now).timestamp()) {
@@ -122,6 +132,15 @@ impl Scheduler {
             self.run_action(Action::Off, d.at.format("%H:%M").to_string());
         }
         self.deferred = pending;
+        if let Some(at) = self.timer {
+            if now >= at {
+                self.run_action(Action::Off, "timer".to_string());
+                self.clear_timer_file();
+            } else if !self.timer_warned && now >= at - WARNING_LEAD {
+                self.timer_warned = true;
+                self.start_warning(at, now, true);
+            }
+        }
     }
 
     fn run_action(&mut self, a: Action, at: String) {
@@ -131,7 +150,7 @@ impl Scheduler {
         }
     }
 
-    fn start_warning(&self, off: DateTime<Local>, now: DateTime<Local>) {
+    fn start_warning(&self, off: DateTime<Local>, now: DateTime<Local>, is_timer: bool) {
         logf!("warning: monitors off at {}", off.format("%H:%M"));
         let warn = Arc::clone(&self.warn);
         let tx = self.postpones_tx.clone();
@@ -141,7 +160,11 @@ impl Scheduler {
                 Err(e) => logf!("warning before {} failed: {e}", off.format("%H:%M")),
                 Ok(delay) => {
                     if delay > Duration::ZERO {
-                        let _ = tx.send(PostponeRequest { off, delay });
+                        let _ = tx.send(PostponeRequest {
+                            off,
+                            delay,
+                            is_timer,
+                        });
                     }
                 }
             }
@@ -155,6 +178,23 @@ impl Scheduler {
     }
 
     fn postpone(&mut self, req: PostponeRequest) {
+        if req.is_timer {
+            if self.timer != Some(req.off) {
+                return;
+            }
+            let at = req.off
+                + chrono::Duration::from_std(req.delay).expect("postpone delay out of range");
+            if let Some(path) = self.timer_path() {
+                if let Err(e) = write_timer_file(&path, at) {
+                    logf!("timer file write failed: {e}");
+                }
+            }
+            self.timer = Some(at);
+            self.timer_warned = false;
+            self.timer_raw = None;
+            logf!("timer postponed to {}", at.format(TIMER_TIME_FORMAT));
+            return;
+        }
         self.skipped.insert(trunc_minute(req.off).timestamp());
         self.deferred.retain(|d| d.at != req.off);
         let at =
@@ -165,6 +205,56 @@ impl Scheduler {
             req.off.format("%H:%M"),
             at.format("%H:%M")
         );
+    }
+
+    fn timer_path(&self) -> Option<PathBuf> {
+        self.config_path
+            .parent()
+            .map(|dir| dir.join(TIMER_FILE_NAME))
+    }
+
+    fn sync_timer(&mut self) {
+        let Some(path) = self.timer_path() else {
+            return;
+        };
+        let Ok(text) = std::fs::read_to_string(&path) else {
+            if self.timer.take().is_some() || self.timer_warned {
+                self.timer_warned = false;
+                logf!("timer cleared");
+            }
+            self.timer_raw = None;
+            return;
+        };
+        if self.timer_raw.as_deref() == Some(text.as_str()) {
+            return;
+        }
+        self.timer_raw = Some(text.clone());
+        match parse_timer_file(&text) {
+            Some(at) => {
+                if self.timer != Some(at) {
+                    logf!(
+                        "timer set: monitors off at {}",
+                        at.format(TIMER_TIME_FORMAT)
+                    );
+                    self.timer = Some(at);
+                    self.timer_warned = false;
+                }
+            }
+            None => logf!("timer file invalid, ignoring: {}", text.trim()),
+        }
+    }
+
+    fn clear_timer_file(&mut self) {
+        if let Some(path) = self.timer_path() {
+            match std::fs::remove_file(&path) {
+                Ok(()) => {}
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+                Err(e) => logf!("timer file remove failed: {e}"),
+            }
+        }
+        self.timer = None;
+        self.timer_warned = false;
+        self.timer_raw = None;
     }
 
     pub fn run(&mut self) {
@@ -193,6 +283,18 @@ fn fs_modified(path: &Path) -> Result<SystemTime, String> {
     std::fs::metadata(path)
         .and_then(|m| m.modified())
         .map_err(|e| format!("stat config: {e}"))
+}
+
+pub fn parse_timer_file(text: &str) -> Option<DateTime<Local>> {
+    let value: serde_json::Value = serde_json::from_str(text).ok()?;
+    let raw = value.get("off_at")?.as_str()?;
+    let naive = chrono::NaiveDateTime::parse_from_str(raw, TIMER_TIME_FORMAT).ok()?;
+    Local.from_local_datetime(&naive).single()
+}
+
+pub fn write_timer_file(path: &Path, at: DateTime<Local>) -> Result<(), String> {
+    let body = format!("{{\"off_at\": \"{}\"}}\n", at.format(TIMER_TIME_FORMAT));
+    std::fs::write(path, body).map_err(|e| format!("write timer file: {e}"))
 }
 
 #[cfg(test)]
@@ -240,6 +342,9 @@ mod tests {
                     .recv()
                     .map_err(|e| e.to_string())
             }),
+            timer: None,
+            timer_warned: false,
+            timer_raw: None,
         };
         TestRig {
             scheduler,
@@ -336,5 +441,80 @@ mod tests {
         rig.scheduler.skipped.insert(trunc_minute(t).timestamp());
         rig.scheduler.tick(t);
         assert_eq!(applied(&rig), vec![Action::On]);
+    }
+
+    fn timer_test_dir(tag: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("monitors-test-{}-{tag}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("create temp dir");
+        dir
+    }
+
+    #[test]
+    fn timer_fires_when_due_and_deletes_file() {
+        let dir = timer_test_dir("fire");
+        let mut rig = new_test_scheduler(vec![]);
+        rig.scheduler.config_path = dir.join("config.json");
+        let fire_at = at(2026, 11, 13, 23, 45, 0);
+        write_timer_file(&dir.join(crate::constants::TIMER_FILE_NAME), fire_at).unwrap();
+
+        rig.scheduler.tick(fire_at - chrono::Duration::seconds(30));
+        assert!(applied(&rig).is_empty(), "fired before due time");
+        assert_eq!(rig.scheduler.timer, Some(fire_at));
+        assert!(rig.scheduler.timer_warned, "warning must start before fire");
+
+        rig.scheduler.tick(fire_at + chrono::Duration::seconds(5));
+        assert_eq!(applied(&rig), vec![Action::Off]);
+        assert_eq!(rig.scheduler.timer, None);
+        assert!(
+            !dir.join(crate::constants::TIMER_FILE_NAME).exists(),
+            "timer file must be deleted after fire"
+        );
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn timer_cancelled_when_file_removed() {
+        let dir = timer_test_dir("cancel");
+        let mut rig = new_test_scheduler(vec![]);
+        rig.scheduler.config_path = dir.join("config.json");
+        let fire_at = at(2026, 11, 13, 23, 45, 0);
+        write_timer_file(&dir.join(crate::constants::TIMER_FILE_NAME), fire_at).unwrap();
+        rig.scheduler.tick(fire_at - chrono::Duration::seconds(30));
+        assert_eq!(rig.scheduler.timer, Some(fire_at));
+
+        std::fs::remove_file(dir.join(crate::constants::TIMER_FILE_NAME)).unwrap();
+        rig.scheduler.tick(fire_at - chrono::Duration::seconds(20));
+        assert_eq!(rig.scheduler.timer, None, "cancel via file removal");
+        assert!(applied(&rig).is_empty(), "cancelled timer must not fire");
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn timer_postpone_rewrites_file() {
+        let dir = timer_test_dir("postpone");
+        let mut rig = new_test_scheduler(vec![]);
+        rig.scheduler.config_path = dir.join("config.json");
+        let fire_at = at(2026, 11, 13, 23, 45, 0);
+        write_timer_file(&dir.join(crate::constants::TIMER_FILE_NAME), fire_at).unwrap();
+        rig.scheduler.tick(fire_at - chrono::Duration::seconds(30));
+        rig.answers_tx.send(Duration::from_secs(30 * 60)).unwrap();
+
+        rig.scheduler.tick(fire_at - chrono::Duration::seconds(20));
+        let req = receive_postpone(&rig);
+        assert!(req.is_timer, "timer warning must be marked as timer");
+        rig.scheduler.postpone(req);
+
+        let new_at = fire_at + chrono::Duration::minutes(30);
+        assert_eq!(rig.scheduler.timer, Some(new_at));
+        let saved = std::fs::read_to_string(dir.join(crate::constants::TIMER_FILE_NAME)).unwrap();
+        assert_eq!(
+            parse_timer_file(&saved),
+            Some(new_at),
+            "file must hold postponed time"
+        );
+
+        rig.scheduler.tick(new_at + chrono::Duration::seconds(5));
+        assert_eq!(applied(&rig), vec![Action::Off]);
+        std::fs::remove_dir_all(&dir).ok();
     }
 }

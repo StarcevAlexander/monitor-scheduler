@@ -1,6 +1,7 @@
 *.exe
 monitors.log
 config.json
+timer.json
 .idea/
 monitors-mac-*
 .monitors.lock

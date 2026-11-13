@@ -9,7 +9,6 @@ use windows::Win32::UI::Shell::FOLDERID_Desktop;
 use windows::Win32::UI::Shell::SHGetKnownFolderPath;
 use windows::Win32::UI::Shell::KF_FLAG_DEFAULT;
 
-use crate::constants::SHORTCUT_NAME;
 use crate::constants_windows::CREATE_NO_WINDOW;
 use crate::constants_windows::POWERSHELL_REL_PATH;
 use crate::constants_windows::SHORTCUT_DIR_ENV;
@@ -19,6 +18,7 @@ use crate::constants_windows::SHORTCUT_ICON_ENV;
 use crate::constants_windows::SHORTCUT_ICON_FILE;
 use crate::constants_windows::SHORTCUT_ICON_INDEX;
 use crate::constants_windows::SHORTCUT_LINK_ENV;
+use crate::constants_windows::SHORTCUT_NAME;
 use crate::constants_windows::SHORTCUT_SCRIPT;
 
 pub fn install(exe_path: &Path) -> Result<(), String> {

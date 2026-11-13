@@ -11,7 +11,8 @@ pub const LOG_FILE_NAME: &str = "monitors.log";
 pub const CHECK_INTERVAL: Duration = Duration::from_secs(15);
 pub const MANUAL_OFF_DELAY: Duration = Duration::from_secs(1);
 pub const WARNING_LEAD: Duration = Duration::from_secs(60);
-pub const SHORTCUT_NAME: &str = "Выключить мониторы";
+pub const TIMER_FILE_NAME: &str = "timer.json";
+pub const TIMER_TIME_FORMAT: &str = "%Y-%m-%d %H:%M";
 
 pub const POSTPONE_OPTIONS: [PostponeOption; 4] = [
     PostponeOption {

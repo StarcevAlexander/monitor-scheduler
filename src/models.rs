@@ -61,6 +61,10 @@ impl ClockTime {
     pub fn new(hour: u32, minute: u32) -> Self {
         Self { hour, minute }
     }
+
+    pub fn parse(s: &str) -> Result<ClockTime, String> {
+        parse_clock_time(s)
+    }
 }
 
 impl fmt::Display for ClockTime {
@@ -212,6 +216,7 @@ pub struct PostponeOption {
 pub struct PostponeRequest {
     pub off: DateTime<Local>,
     pub delay: Duration,
+    pub is_timer: bool,
 }
 
 #[derive(Clone, Copy, Debug)]
