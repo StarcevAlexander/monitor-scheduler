@@ -13,6 +13,8 @@ pub const MANUAL_OFF_DELAY: Duration = Duration::from_secs(1);
 pub const WARNING_LEAD: Duration = Duration::from_secs(60);
 pub const TIMER_FILE_NAME: &str = "timer.json";
 pub const TIMER_TIME_FORMAT: &str = "%Y-%m-%d %H:%M";
+pub const GUI_WEB_PORT: u16 = 48484;
+pub const GUI_WEB_HOST: &str = "127.0.0.1";
 
 pub const POSTPONE_OPTIONS: [PostponeOption; 4] = [
     PostponeOption {

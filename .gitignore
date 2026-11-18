@@ -6,3 +6,5 @@ timer.json
 monitors-mac-*
 .monitors.lock
 /target
+.mimosa/
+.video_agent/

@@ -6,6 +6,7 @@
 mod action;
 mod config;
 mod constants;
+mod gui_web;
 mod logger;
 mod models;
 mod schedule;
@@ -19,8 +20,6 @@ mod autostart_windows;
 mod constants_darwin;
 #[cfg(windows)]
 mod constants_windows;
-#[cfg(windows)]
-mod gui_windows;
 #[cfg(target_os = "macos")]
 mod monitor_darwin;
 #[cfg(windows)]
@@ -90,7 +89,7 @@ fn run(exe_path: &Path, command: &str) -> Result<(), String> {
             Ok(())
         }
         "on" => monitor::monitors_on(),
-        "gui" => gui_command(dir),
+        "gui" => gui_web::run_panel(dir),
         "warn" => {
             let delay = warning::show_off_warning(WARNING_LEAD)?;
             logf!("warning closed, postpone: {delay:?}");
@@ -123,16 +122,6 @@ fn run(exe_path: &Path, command: &str) -> Result<(), String> {
             "unknown command {command:?}, use: run | gui | on | off | warn | install | uninstall | status"
         )),
     }
-}
-
-#[cfg(windows)]
-fn gui_command(dir: &Path) -> Result<(), String> {
-    gui_windows::run_panel(dir)
-}
-
-#[cfg(not(windows))]
-fn gui_command(_dir: &Path) -> Result<(), String> {
-    Err("gui is supported on Windows only".to_string())
 }
 
 fn run_scheduler(config_path: &Path) -> Result<(), String> {
