@@ -20,6 +20,10 @@ mod autostart_windows;
 mod constants_darwin;
 #[cfg(windows)]
 mod constants_windows;
+#[cfg(not(windows))]
+mod keyboard_stub;
+#[cfg(windows)]
+mod keyboard_windows;
 #[cfg(target_os = "macos")]
 mod monitor_darwin;
 #[cfg(windows)]
@@ -37,6 +41,10 @@ mod warning_windows;
 pub(crate) use autostart_darwin as autostart;
 #[cfg(windows)]
 pub(crate) use autostart_windows as autostart;
+#[cfg(not(windows))]
+pub(crate) use keyboard_stub as keyboard;
+#[cfg(windows)]
+pub(crate) use keyboard_windows as keyboard;
 #[cfg(target_os = "macos")]
 pub(crate) use monitor_darwin as monitor;
 #[cfg(windows)]

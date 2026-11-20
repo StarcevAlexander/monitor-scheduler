@@ -2,6 +2,8 @@ pub const AUTOSTART_KEY_PATH: &str = r"Software\Microsoft\Windows\CurrentVersion
 pub const AUTOSTART_VALUE_NAME: &str = "MonitorScheduler";
 pub const SINGLE_INSTANCE_MUTEX: &str = r"Local\MonitorSchedulerSingleInstance";
 pub const GUI_MUTEX_ACCESS: u32 = 0x0010_0000;
+
+pub const VK_MEDIA_STOP: i32 = 0xB2;
 pub const SHORTCUT_NAME: &str = "Мониторы";
 
 pub const WARNING_TITLE: &str = "Мониторы";

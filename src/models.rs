@@ -228,6 +228,11 @@ pub struct DeferredOff {
 pub type ApplyFn = Box<dyn FnMut(Action) -> Result<(), String> + Send>;
 pub type WarnFn = Arc<dyn Fn(Duration) -> Result<Duration, String> + Send + Sync>;
 
+#[derive(Debug, Default)]
+pub struct ProbeReading {
+    pub codes: Vec<String>,
+}
+
 use std::sync::Arc;
 
 pub fn postpone_delay(option_index: usize) -> Option<Duration> {

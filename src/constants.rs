@@ -15,6 +15,8 @@ pub const TIMER_FILE_NAME: &str = "timer.json";
 pub const TIMER_TIME_FORMAT: &str = "%Y-%m-%d %H:%M";
 pub const GUI_WEB_PORT: u16 = 48484;
 pub const GUI_WEB_HOST: &str = "127.0.0.1";
+pub const PROBE_CAPTURE_SECS: u64 = 20;
+pub const PROBE_POLL_MS: u64 = 25;
 
 pub const POSTPONE_OPTIONS: [PostponeOption; 4] = [
     PostponeOption {

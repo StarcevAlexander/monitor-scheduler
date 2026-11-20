@@ -165,6 +165,21 @@ fn route(
                 respond_redirect(stream, &error_redirect(&e))
             }
         },
+        "/keyboard/backlight" => match crate::keyboard::send_media_stop() {
+            Ok(()) => {
+                logf!("gui: keyboard backlight toggled");
+                respond_redirect(stream, "/")
+            }
+            Err(e) => {
+                logf!("gui: backlight toggle failed: {e}");
+                respond_redirect(stream, &error_redirect(&e))
+            }
+        },
+        "/probe" => {
+            let reading = crate::keyboard::probe_capture()?;
+            let page = render_probe(&reading);
+            respond_html(stream, &page)
+        }
         _ => respond_not_found(stream),
     }
 }
@@ -411,6 +426,26 @@ fn render_page(dir: &Path, error: Option<&str>) -> String {
         ))
         .render();
 
+    let backlight_button = Button::new("Подсветка вкл/выкл")
+        .variant(ButtonVariant::Filled)
+        .color(matui::Color::Primary)
+        .link("/keyboard/backlight")
+        .render();
+    let probe_button = Button::new("Пробник кодов")
+        .variant(ButtonVariant::Outlined)
+        .color(matui::Color::Secondary)
+        .link("/probe")
+        .render();
+    let keyboard_card = Card::new()
+        .title("Клавиатура")
+        .body(format!(
+            "<p class=\"matui-body-medium\">Тот же эффект, что у FN + F5: включает и выключает подсветку.</p>\
+             <div class=\"monitors-actions\">{backlight_button}</div>\
+             <div class=\"monitors-row monitors-row--end\">{probe_button}</div>\
+             <p class=\"matui-body-small monitors-note\">Пробник ловит коды любых FN-комбинаций: нажмите кнопку и в течение 20 секунд жмите комбинацию на клавиатуре.</p>"
+        ))
+        .render();
+
     let banner = error
         .map(|e| {
             format!(
@@ -433,7 +468,7 @@ fn render_page(dir: &Path, error: Option<&str>) -> String {
          {}\
          <main class=\"monitors-grid\">{banner}\
          <div class=\"monitors-status\">{scheduler_badge}<span class=\"matui-body-medium mono-status\">{timer_status}</span></div>\
-         {control_card}{timer_card}{schedule_card}{schedule_note}</main></body></html>",
+         {control_card}{timer_card}{schedule_card}{keyboard_card}{schedule_note}</main></body></html>",
         css::stylesheet(),
         overrides_css(),
         TopAppBar::new("Мониторы")
@@ -448,6 +483,44 @@ fn render_page(dir: &Path, error: Option<&str>) -> String {
 fn format_duration(d: std::time::Duration) -> String {
     let minutes = d.as_secs() / 60;
     format!("{minutes} мин")
+}
+
+fn render_probe(reading: &crate::models::ProbeReading) -> String {
+    let list = if reading.codes.is_empty() {
+        String::from("<p class=\"matui-body-medium\">Кодов не поймано — комбинация не дошла до системы. Попробуйте ещё раз.</p>")
+    } else {
+        let items: Vec<String> = reading
+            .codes
+            .iter()
+            .map(|c| format!("<li class=\"mono\">{c}</li>"))
+            .collect();
+        format!("<ul class=\"monitors-probe-list\">{}</ul>", items.join(""))
+    };
+    format!(
+        "<!doctype html><html lang=\"ru\"><head><meta charset=\"utf-8\">\
+         <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\
+         <title>Пробник кодов</title><style>{}{}</style></head><body>\
+         <main class=\"monitors-grid\">\
+         <div class=\"matui-card\"><h3 class=\"matui-card__title\">Пробник кодов</h3>\
+         <div class=\"matui-card__body\">\
+         <p class=\"matui-body-medium\">Поймано кодов: {}</p>{list}\
+         <p class=\"matui-body-small monitors-note\">Пойманные коды видны системе — их можно вешать на кнопки панели.</p>\
+         <div class=\"monitors-row\">{}{}</div>\
+         </div></div></main></body></html>",
+        css::stylesheet(),
+        overrides_css(),
+        reading.codes.len(),
+        Button::new("Повторить")
+            .variant(ButtonVariant::Filled)
+            .color(matui::Color::Primary)
+            .link("/probe")
+            .render(),
+        Button::new("К панели")
+            .variant(ButtonVariant::Outlined)
+            .color(matui::Color::Primary)
+            .link("/")
+            .render(),
+    )
 }
 
 fn html_escape(text: &str) -> String {
@@ -479,6 +552,7 @@ fn overrides_css() -> &'static str {
      .mono,.mono-status,.monitors-clock{font-family:Consolas,'Courier New',monospace;}\
      .monitors-clock{font-size:22px;font-weight:700;color:var(--matui-primary);}\
      .monitors-note{color:var(--matui-on-surface-variant);margin-top:2px;}\
+     .monitors-probe-list{margin:8px 0 0;padding-left:18px;font-size:16px;}\
      .monitors-error{border:1px solid var(--matui-error);color:var(--matui-on-error-container);background:var(--matui-error-container);border-radius:6px;padding:10px 14px;font-size:14px;}"
 }
 
